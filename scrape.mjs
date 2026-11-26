@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { parseRates, isSane } from './parse.mjs';
-import { updateHistory } from './history.mjs';
+import { updateHistory, withSeed } from './history.mjs';
 
 const BASE = 'https://sarafi.af/en/exchange-rates/';
 const MARKETS = [
@@ -39,7 +39,9 @@ let failed = 0;
 
 for (const m of MARKETS) {
   const url = BASE + m.id;
-  const prevHistory = await previous(`history-${m.id}.json`);
+  const seedFile = `seed/history-${m.id}.json`;
+  const seed = existsSync(seedFile) ? JSON.parse(readFileSync(seedFile, 'utf8')) : null;
+  const prevHistory = withSeed(await previous(`history-${m.id}.json`), seed);
   try {
     const rates = parseRates(await (await get(url)).text());
     if (!isSane(rates)) throw new Error('rates failed sanity check (site layout may have changed)');

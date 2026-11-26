@@ -20,3 +20,17 @@ export function updateHistory(prev, market, now) {
   }
   return { marketId: market.id, updatedAt: new Date(now).toISOString(), pairs };
 }
+
+// Fills days missing from `history` with candles from a seed file (the one-time
+// backfill in seed/). Days this job recorded itself always win.
+export function withSeed(history, seed) {
+  if (!seed) return history;
+  const pairs = { ...(history?.pairs ?? {}) };
+  for (const [pair, s] of Object.entries(seed.pairs)) {
+    const own = pairs[pair] ?? { intraday: [], daily: [] };
+    const days = new Map(s.daily.map((d) => [d[0], d]));
+    for (const d of own.daily) days.set(d[0], d);
+    pairs[pair] = { intraday: own.intraday, daily: [...days.values()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-KEEP_DAYS) };
+  }
+  return { ...(history ?? { marketId: seed.marketId }), pairs };
+}

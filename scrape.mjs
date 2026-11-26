@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { parseRates, isSane } from './parse.mjs';
 import { updateHistory, withSeed } from './history.mjs';
+import { postChanges } from './telegram.mjs';
 
 const BASE = 'https://sarafi.af/en/exchange-rates/';
 const MARKETS = [
@@ -69,3 +70,5 @@ write('rates.json', { source: 'sarafi.af', sourceUrl: 'https://sarafi.af', gener
 for (const h of histories) write(`history-${h.marketId}.json`, h);
 // GitHub Pages: serve files as-is.
 writeFileSync(`${OUT_DIR}/.nojekyll`, '');
+
+await postChanges(prevRates, markets);

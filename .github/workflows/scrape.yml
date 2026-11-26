@@ -37,6 +37,8 @@ jobs:
         run: node scrape.mjs
         env:
           PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

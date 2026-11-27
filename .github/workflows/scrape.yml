@@ -2,9 +2,10 @@ name: Scrape rates
 
 on:
   schedule:
-    # Every 15 minutes, off the :00/:15/:30/:45 marks: GitHub delays or drops scheduled
-    # runs at the busy top of the hour. Runs can still start a few minutes late.
-    - cron: '7,22,37,52 * * * *'
+    # Backup for cron-job.org: market hours only, Saturday–Thursday 07:37–16:37 Kabul (UTC+4:30),
+    # off the busy :00/:30 marks where GitHub delays or drops scheduled runs.
+    - cron: '7,37 3-11 * * 0-4,6'
+    - cron: '7 12 * * 0-4,6'
   workflow_dispatch: # "Run workflow" button for manual runs
 
 permissions:

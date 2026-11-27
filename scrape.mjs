@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { parseRates, isSane } from './parse.mjs';
 import { updateHistory, withSeed } from './history.mjs';
-import { postChanges } from './telegram.mjs';
+import { postTelegram } from './telegram.mjs';
 
 const BASE = 'https://sarafi.af/en/exchange-rates/';
 const MARKETS = [
@@ -64,11 +64,12 @@ if (failed === MARKETS.length) {
   process.exit(1);
 }
 
+// Posted before writing: rates.json carries which opening/closing posts already went out today.
+const telegram = await postTelegram(prevRates, markets, { now });
+
 mkdirSync(OUT_DIR, { recursive: true });
 const write = (file, data) => writeFileSync(`${OUT_DIR}/${file}`, JSON.stringify(data));
-write('rates.json', { source: 'sarafi.af', sourceUrl: 'https://sarafi.af', generatedAt: new Date(now).toISOString(), markets });
+write('rates.json', { source: 'sarafi.af', sourceUrl: 'https://sarafi.af', generatedAt: new Date(now).toISOString(), markets, telegram });
 for (const h of histories) write(`history-${h.marketId}.json`, h);
 // GitHub Pages: serve files as-is.
 writeFileSync(`${OUT_DIR}/.nojekyll`, '');
-
-await postChanges(prevRates, markets);

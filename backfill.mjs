@@ -2,9 +2,10 @@
 // used with sarafi.af's permission. Run locally, once:
 //
 //   node backfill.mjs        → writes seed/history-<market>.json, then commit seed/
+//                              (re-running only fills pairs that are still missing)
 //
 // scrape.mjs merges these seed files into the published history on every run.
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as cheerio from 'cheerio';
 import { kabulDate } from './history.mjs';
 
@@ -66,9 +67,12 @@ async function main() {
       .map((_, tr) => ({ href: $(tr).find('a.rate-pair').attr('href'), sell: Number($(tr).find('.is-sell').text().replace(/,/g, '')) }))
       .get()
       .filter((r) => r.href);
-    const pairs = {};
+    // Keep what an earlier run already saved; only fetch pairs that are missing (a failed fetch never drops data).
+    const file = `seed/history-${marketId}.json`;
+    const pairs = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).pairs : {};
     for (const { href, sell } of rows) {
       const pair = href.split('/').pop().replace('-', '/');
+      if (pairs[pair]) continue;
       await sleep(1500); // be gentle with the source
       try {
         const raw = toDaily(await chartPoints(href));
@@ -83,7 +87,7 @@ async function main() {
         console.error(`${marketId} ${pair}: skipped — ${e.message}`);
       }
     }
-    writeFileSync(`seed/history-${marketId}.json`, JSON.stringify({ marketId, updatedAt: new Date().toISOString(), pairs }));
+    writeFileSync(file, JSON.stringify({ marketId, updatedAt: new Date().toISOString(), pairs }));
   }
 }
 

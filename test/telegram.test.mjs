@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMessage, changedMarkets, kabulClock, postTelegram, session } from '../telegram.mjs';
+import { buildMessage, changedMarkets, kabulClock, postTelegram, session, toJalali } from '../telegram.mjs';
+
+test('Solar Hijri conversion matches known dates', () => {
+  assert.deepEqual(toJalali(2025, 3, 21), [1404, 1, 1]);
+  assert.deepEqual(toJalali(2026, 11, 28), [1405, 9, 7]);
+});
 
 const usd = (buy, sell) => ({ pair: 'USD/AFN', base: 'USD', quote: 'AFN', unit: 1, buy, sell });
 const irr = { pair: 'IRR/AFN', base: 'IRR', quote: 'AFN', unit: 1000, buy: 0.234, sell: 0.235 };
@@ -17,9 +22,12 @@ test('only markets whose buy or sell moved count as changed', () => {
 test('message shows toman per 1M and marks the direction of change', () => {
   const msg = buildMessage(market('sarai-shahzada', [usd(66.8, 66.9), irr]), market('sarai-shahzada', [usd(66.8, 66.85), irr]), Date.UTC(2026, 10, 27, 10, 0));
   assert.match(msg, /سرای شهزاده/);
-  assert.match(msg, /27\/11\/2026, 14:30/); // Kabul is UTC+4:30
-  assert.match(msg, /USD \| 66\.80 \| 66\.90 ▲/);
-  assert.match(msg, /IRT \(1M\) \| 234\.00 \| 235\.00$/m);
+  assert.match(msg, /📅 جمعه 6 قوس 1405 · ساعت 14:30/); // Kabul is UTC+4:30; 27 Nov 2026 = 6 Qaws 1405
+  assert.match(msg, /^🇺🇸 دالر امریکایی$/m);
+  assert.match(msg, /^خرید 66\.80 · فروش 66\.90 🔺$/m);
+  assert.match(msg, /^🇮🇷 تومان ایران \(یک میلیون\)\nخرید 234\.00 · فروش 235\.00$/m);
+  // Every non-empty line starts with Dari text (after an emoji), so Telegram renders it right to left.
+  for (const line of msg.split('\n').filter(Boolean)) assert.match(line, /^[^\p{L}]*[؀-ۿ]/u, line);
 });
 
 test('without secrets nothing is sent', async () => {
